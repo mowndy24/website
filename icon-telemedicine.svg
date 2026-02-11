@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang=en>
+<title>Security Challenge</title>
+<style>
+    body {
+        margin: 0;
+        font: 20px sans-serif;
+        background: #102c53;
+        color: #fff;
+        text-align: center
+    }
+
+    .box {
+        max-width: 768px;
+        margin: 5% auto;
+        padding: 1em;
+        background: #fff;
+        color: #000;
+        border-radius: 6px
+    }
+
+    a {
+        color: #0d83dd
+    }
+
+    .loading {
+        display: none;
+        color: #666;
+        font-size: 16px;
+        margin-top: 20px
+    }
+
+    .error {
+        display: none;
+        color: #d32f2f;
+        font-size: 16px;
+        margin-top: 20px
+    }
+
+    .success {
+        display: none;
+        color: #2e7d32;
+        font-size: 16px;
+        margin-top: 20px
+    }
+</style>
+<div class=box>
+    <p>This site is protected by a Web Application Firewall (WAF).</p>
+    <p>Please complete the security challenge below to continue.</p>
+    <div class="h-captcha" data-sitekey="fbb8dd36-e6ce-4460-bcfe-a2b2b5ae3770" data-callback="onCaptchaSuccess"
+        data-expired-callback="onCaptchaExpired" data-error-callback="onCaptchaError"></div>
+    <div class="loading">Verifying your response...</div>
+    <div class="error">Verification failed. Please try again.</div>
+    <div class="success">Verification successful! Redirecting...</div>
+</div>
+<script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+<script>
+    function onCaptchaSuccess(token) {
+        document.querySelector('.h-captcha').style.display = 'none';
+        document.querySelector('.loading').style.display = 'block';
+
+        // Send token to validation endpoint
+        fetch('/wab-cgi/validate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'h-captcha-response=' + encodeURIComponent(token)
+        })
+            .then(response => response.json())
+            .then(data => {
+                document.querySelector('.loading').style.display = 'none';
+                if (data.success) {
+                    document.querySelector('.success').style.display = 'block';
+                    // Redirect to original page after a short delay
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    document.querySelector('.error').style.display = 'block';
+                    document.querySelector('.h-captcha').style.display = 'block';
+                    // Reset hCaptcha
+                    hcaptcha.reset();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.querySelector('.loading').style.display = 'none';
+                document.querySelector('.error').style.display = 'block';
+                document.querySelector('.h-captcha').style.display = 'block';
+                hcaptcha.reset();
+            });
+    }
+
+    function onCaptchaExpired() {
+        document.querySelector('.error').style.display = 'block';
+        document.querySelector('.error').textContent = 'Challenge expired. Please try again.';
+    }
+
+    function onCaptchaError(error) {
+        console.error('hCaptcha error:', error);
+        document.querySelector('.error').style.display = 'block';
+        document.querySelector('.error').textContent = 'Challenge failed to load. Please refresh the page.';
+    }
+</script>
+
+</html>
+
